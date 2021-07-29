@@ -1,101 +1,3 @@
-# Springboot 整合 Redis (基于Lettuce)
-
-
-## Redis 介绍
-Redis是一个开源的使用ANSI C语言编写, 支持网络, 可基于内存亦可持久化的日志型, key-value数据库,
-
-## Lettuce
-`Lettuce` 和 `Jedis` 的都是连接`Redis Server`的客户端程序。`Jedis`在实现上是直连`redis server`，多线程环境下非线程安全，
-除非使用连接池， 为每个`Jedis`实例增加物理连接。`Lettuce`基于`Netty`的连接实例（`StatefulRedisConnection`），可以在多个线程间并发访问，
-且线程安全， 满足多线程环境下的并发访问，同时它是可伸缩的设计，一个连接实例不够的情况也可以按需增加连接实例
-
-## 导入依赖
-```xml
-        <!-- redis -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-data-redis</artifactId>
-        </dependency>
-        <!-- https://mvnrepository.com/artifact/org.apache.commons/commons-pool2 -->
-        <!--spring2.0集成redis所需common-pool2-->
-        <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-pool2</artifactId>
-            <version>2.10.0</version>
-        </dependency>
-```
-## 属性配置
-在属性中配置Redis Server的访问地址、密码、数据库，并配置连接池的属性。
-```properties
-spring.redis.host=172.16.173.3
-spring.redis.port=6379
-spring.redis.password=
-#连接超时时间(毫秒)
-spring.redis.timeout=10000
-# Redis默认情况下有16个分片，这里配置具体使用的分片，默认是0
-spring.redis.database=0
-# 连接池最大连接数（使用负值表示没有限制） 默认 8
-spring.redis.lettuce.pool.max-active=8
-# 连接池最大阻塞等待时间（使用负值表示没有限制） 默认 -1
-spring.redis.lettuce.pool.max-wait=-1
-# 连接池中的最大空闲连接 默认 8
-spring.redis.lettuce.pool.max-idle=8
-# 连接池中的最小空闲连接 默认 0
-spring.redis.lettuce.pool.min-idle=0
-```
-## Redis 配置类
-
-```java
-package com.demo.zwz.redis.config;
-
-import com.fasterxml.jackson.annotation.JsonAutoDetect;
-import com.fasterxml.jackson.annotation.PropertyAccessor;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.data.redis.connection.RedisConnectionFactory;
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
-import org.springframework.data.redis.serializer.StringRedisSerializer;
-
-/**
- * @Description:
- * @Auther: zwz
- * @Date: 2021-07-29-4:21 下午
- */
-@Configuration
-public class RedisConfig {
-
-    @Bean
-    public RedisTemplate redisTemplate(RedisConnectionFactory factory) {
-        //初始化一个redis模板
-        RedisTemplate<String, Object> template = new RedisTemplate<>();
-        template.setConnectionFactory(factory);
-        //使用fastjson实现对于对象得序列化
-        Jackson2JsonRedisSerializer serializer = new Jackson2JsonRedisSerializer(Object.class);
-        ObjectMapper om = new ObjectMapper();
-        om.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY);
-        om.enableDefaultTyping(ObjectMapper.DefaultTyping.NON_FINAL);
-        serializer.setObjectMapper(om);
-
-        StringRedisSerializer stringRedisSerializer = new StringRedisSerializer();
-        // key采用String的序列化方式
-        template.setKeySerializer(stringRedisSerializer);
-        // hash的key也采用String的序列化方式
-        template.setHashKeySerializer(stringRedisSerializer);
-        // value序列化方式采用jackson
-        template.setValueSerializer(serializer);
-        // hash的value序列化方式采用jackson
-        template.setHashValueSerializer(serializer);
-        template.afterPropertiesSet();
-        return template;
-    }
-}
-```
-
-## 编写工具类
-
-```java
 package com.demo.zwz.redis.util;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -116,12 +18,12 @@ import java.util.concurrent.TimeUnit;
  * @Date: 2021-07-29-4:33 下午
  */
 @Component
-public class ReidsUtil {
+public class RedisUtil {
 
     @Autowired
     private final RedisTemplate<String, Object> redisTemplate;
 
-    public ReidsUtil(RedisTemplate<String, Object> redisTemplate) {
+    public RedisUtil(RedisTemplate<String, Object> redisTemplate) {
         this.redisTemplate = redisTemplate;
     }
 
@@ -678,13 +580,7 @@ public class ReidsUtil {
         BoundListOperations<String, Object> boundValueOperations = redisTemplate.boundListOps(listKey);
         return boundValueOperations.rightPop();
     }
-    
+
     //=========BoundListOperations 用法 End============
 
 }
-
-```
-
-## 测试类：
-
-
