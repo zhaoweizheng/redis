@@ -8,6 +8,7 @@ class RedisApplicationTests {
 
     @Test
     void contextLoads() {
+        System.out.println("zhaoweizheng");
     }
 
 }
